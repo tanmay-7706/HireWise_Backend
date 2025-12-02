@@ -8,16 +8,31 @@ const { notFound, errorHandler } = require('./middleware/errorHandler');
 
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/user');
+const resumeRoutes = require('./routes/resume');
+const jdRoutes = require('./routes/jd');
+const interviewRoutes = require('./routes/interview');
 
 const app = express();
 
-const frontendOrigin = process.env.FRONTEND_URL || 'https://hirewisefrontend.vercel.app';
+// CORS configuration for development and production
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000', 
+  'https://hirewisefrontend.vercel.app'
+];
 
 app.use(cors({
-  origin: [frontendOrigin, 'http://localhost:3000', 'http://localhost:5173'],
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  optionsSuccessStatus: 200
 }));
 
 app.use(express.json({ limit: '10mb' }));
@@ -38,13 +53,17 @@ app.get('/', (req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/resume', resumeRoutes);
+app.use('/api/jd', jdRoutes);
+app.use('/api/interview', interviewRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 const server = app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🌐 CORS enabled for: ${allowedOrigins.join(', ')}`);
 });
 
 process.on('SIGTERM', gracefulShutdown);
