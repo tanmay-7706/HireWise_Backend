@@ -6,7 +6,9 @@ const connectDB = async () => {
   
   // Validate MongoDB URI
   if (!uri) {
-    console.error('❌ MONGO_URI is not set in .env file');
+    console.error('❌ MONGO_URI environment variable is not set');
+    console.error('💡 Please set MONGO_URI in your environment variables or .env file');
+    console.error('📖 See SECURITY.md for setup instructions');
     process.exit(1);
   }
 
