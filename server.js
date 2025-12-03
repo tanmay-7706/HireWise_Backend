@@ -17,7 +17,7 @@ const app = express();
 // CORS configuration for development and production
 const allowedOrigins = [
   'http://localhost:5173',
-  'http://localhost:3000', 
+  'http://localhost:3000',
   'https://hirewisefrontend.vercel.app'
 ];
 
@@ -41,13 +41,13 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 connectDB();
 
 app.get('/', (req, res) => {
-  return res.json({ 
-    success: true, 
-    message: 'HireWise API is running', 
-    data: { 
+  return res.json({
+    success: true,
+    message: 'HireWise API is running',
+    data: {
       version: '1.0.0',
       timestamp: new Date().toISOString()
-    } 
+    }
   });
 });
 
@@ -56,6 +56,7 @@ app.use('/api/user', userRoutes);
 app.use('/api/resume', resumeRoutes);
 app.use('/api/jd', jdRoutes);
 app.use('/api/interview', interviewRoutes);
+app.use('/api/career', require('./routes/career'));
 
 app.use(notFound);
 app.use(errorHandler);
@@ -71,10 +72,10 @@ process.on('SIGINT', gracefulShutdown);
 
 async function gracefulShutdown(signal) {
   console.log(`\n📡 Received ${signal}. Starting graceful shutdown...`);
-  
+
   server.close(async () => {
     console.log('🔒 HTTP server closed.');
-    
+
     try {
       await mongoose.connection.close();
       console.log('🗄️ MongoDB connection closed.');
@@ -84,7 +85,7 @@ async function gracefulShutdown(signal) {
       process.exit(1);
     }
   });
-  
+
   setTimeout(() => {
     console.error('❌ Could not close connections in time, forcefully shutting down');
     process.exit(1);

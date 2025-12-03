@@ -116,8 +116,56 @@ Suggestions: [text]`;
     }
 }
 
+async function generateCareerRoadmap(currentSkills, targetRole) {
+    try {
+        const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+
+        const prompt = `Create a detailed career roadmap for a user wanting to become a "${targetRole}".
+        
+User's Current Skills: ${currentSkills.join(', ')}
+
+Provide a step-by-step roadmap to bridge the gap.
+Format the response as a JSON object with the following structure:
+{
+  "overview": "Brief summary of the path",
+  "roadmap": [
+    {
+      "step": 1,
+      "title": "Step Title",
+      "description": "Detailed description of what to learn",
+      "resources": ["Resource 1", "Resource 2"],
+      "estimatedTime": "e.g. 2 weeks"
+    }
+  ]
+}
+Return ONLY the JSON object, no markdown formatting.`;
+
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        let text = response.text();
+
+        // Clean up markdown code blocks if present
+        text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+
+        const data = JSON.parse(text);
+
+        return {
+            success: true,
+            data: data
+        };
+
+    } catch (error) {
+        console.error('Roadmap Generation Error:', error);
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+}
+
 module.exports = {
     analyzeResume,
     generateInterviewQuestions,
-    evaluateAnswer
+    evaluateAnswer,
+    generateCareerRoadmap
 };

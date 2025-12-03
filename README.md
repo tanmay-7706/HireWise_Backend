@@ -89,9 +89,15 @@ All API responses follow a consistent structure:
 
 1. Clone the repository
 2. Install dependencies: `npm install`
-3. Configure environment variables in `.env`
-4. Start development server: `npm run dev`
-5. Start production server: `npm start`
+3. **SECURITY**: Copy `.env.example` to `.env` and update with your values:
+   ```bash
+   cp .env.example .env
+   ```
+4. Update `.env` with your MongoDB Atlas connection string and JWT secret
+5. Start development server: `npm run dev`
+6. Start production server: `npm start`
+
+**⚠️ NEVER commit `.env` files to version control!**
 
 ## Database Schema
 
