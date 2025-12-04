@@ -57,6 +57,7 @@ app.use('/api/resume', resumeRoutes);
 app.use('/api/jd', jdRoutes);
 app.use('/api/interview', interviewRoutes);
 app.use('/api/career', require('./routes/career'));
+app.use('/api/mockjd', require('./routes/mockjd'));
 
 app.use(notFound);
 app.use(errorHandler);
