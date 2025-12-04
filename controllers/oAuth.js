@@ -19,7 +19,7 @@ const googleLogin = async (req, res) => {
             });
         }
 
-        console.log('🔐 Received Google token, fetching user info...');
+        console.log('[OAUTH] Received Google token, fetching user info...');
 
         // 1. Use the access token to get user info from Google
         const googleResponse = await axios.get(
@@ -29,22 +29,22 @@ const googleLogin = async (req, res) => {
         const { email, name, picture, sub: googleId } = googleResponse.data;
 
         if (!email) {
-            console.error('❌ Email not found in Google response');
+            console.error('[OAUTH ERROR] Email not found in Google response');
             return res.status(400).json({
                 success: false,
                 message: 'Email not found in Google account'
             });
         }
 
-        console.log(`🔐 Google Auth processing for: ${email}`);
+        console.log(`[OAUTH] Google Auth processing for: ${email}`);
 
         // 2. Check if user exists in our database
         let user = await User.findOne({ email: email.toLowerCase() });
 
         if (user) {
-            console.log('✅ User found in DB. Logging in...');
+            console.log('[OAUTH] User found in DB. Logging in...');
         } else {
-            console.log('🆕 User not found. Creating new account...');
+            console.log('[OAUTH] User not found. Creating new account...');
 
             // 3. Create new user if not exists
             // Generate a random secure password since they use Google Auth
@@ -61,7 +61,7 @@ const googleLogin = async (req, res) => {
                 password: hashedPassword,
             });
 
-            console.log('✅ New user created:', user.email);
+            console.log('[OAUTH] New user created:', user.email);
         }
 
         // 4. Generate JWT Token (Same logic as standard login)
@@ -88,7 +88,7 @@ const googleLogin = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('❌ Google Auth Error:', error.response?.data || error.message);
+        console.error('[OAUTH ERROR] Google Auth Error:', error.response?.data || error.message);
         return res.status(500).json({
             success: false,
             message: 'Google authentication failed',

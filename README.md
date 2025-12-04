@@ -116,6 +116,15 @@ All API responses follow a consistent structure:
 
 The backend is deployed on Railway with automatic deployments from the main branch.
 
+### Railway Environment Variables:
+Set these in Railway Dashboard → Variables:
+- `MONGO_URI` - MongoDB Atlas connection string
+- `JWT_SECRET` - Secure JWT secret key
+- `FRONTEND_URL` - Frontend URL (https://hirewisefrontend.vercel.app)
+- `PORT` - 5001
+- `NODE_ENV` - production
+- `BCRYPT_ROUNDS` - 12
+
 **Live Backend API**: https://hirewise.up.railway.app
 
 **Frontend Application**: https://hirewisefrontend.vercel.app

@@ -3,12 +3,12 @@ const mongoose = require('mongoose');
 // MongoDB connection with enhanced error handling
 const connectDB = async () => {
   const uri = process.env.MONGO_URI;
-  
+
   // Validate MongoDB URI
   if (!uri) {
-    console.error('❌ MONGO_URI environment variable is not set');
-    console.error('💡 Please set MONGO_URI in your environment variables or .env file');
-    console.error('📖 See SECURITY.md for setup instructions');
+    console.error('[ERROR] MONGO_URI environment variable is not set');
+    console.error('[INFO] Please set MONGO_URI in your environment variables or .env file');
+    console.error('[INFO] See SECURITY.md for setup instructions');
     process.exit(1);
   }
 
@@ -21,29 +21,29 @@ const connectDB = async () => {
       family: 4 // Use IPv4, skip trying IPv6
     };
 
-    console.log('🔄 Connecting to MongoDB Atlas...');
+    console.log('[DB] Connecting to MongoDB Atlas...');
     await mongoose.connect(uri, options);
-    
-    console.log('✅ MongoDB Atlas connected successfully');
-    console.log(`📊 Database: ${mongoose.connection.name}`);
-    console.log(`🏠 Host: ${mongoose.connection.host}`);
-    
+
+    console.log('[DB] MongoDB Atlas connected successfully');
+    console.log(`[DB] Database: ${mongoose.connection.name}`);
+    console.log(`[DB] Host: ${mongoose.connection.host}`);
+
     // Connection event listeners
     mongoose.connection.on('error', (err) => {
-      console.error('❌ MongoDB connection error:', err);
+      console.error('[DB ERROR] MongoDB connection error:', err);
     });
-    
+
     mongoose.connection.on('disconnected', () => {
-      console.warn('⚠️ MongoDB disconnected');
+      console.warn('[DB WARN] MongoDB disconnected');
     });
-    
+
     mongoose.connection.on('reconnected', () => {
-      console.log('🔄 MongoDB reconnected');
+      console.log('[DB] MongoDB reconnected');
     });
-    
+
   } catch (err) {
-    console.error('❌ MongoDB connection failed:', err.message);
-    console.error('🔍 Check your MONGO_URI and network connection');
+    console.error('[DB ERROR] MongoDB connection failed:', err.message);
+    console.error('[DB INFO] Check your MONGO_URI and network connection');
     process.exit(1);
   }
 };

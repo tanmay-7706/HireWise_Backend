@@ -9,7 +9,7 @@ router.get('/', auth, async (req, res) => {
   try {
     const interviews = await Interview.find({ userId: req.user.userId })
       .sort({ createdAt: -1 });
-      
+
     return res.json({
       success: true,
       message: `Found ${interviews.length} interviews`,
@@ -32,7 +32,7 @@ router.get('/:id', auth, async (req, res) => {
       _id: req.params.id,
       userId: req.user.userId
     });
-    
+
     if (!interview) {
       return res.status(404).json({
         success: false,
@@ -40,7 +40,7 @@ router.get('/:id', auth, async (req, res) => {
         data: null
       });
     }
-    
+
     return res.json({
       success: true,
       message: 'Interview retrieved successfully',
@@ -60,13 +60,13 @@ router.get('/:id', auth, async (req, res) => {
 router.post('/start', auth, async (req, res) => {
   try {
     const { type = 'mock' } = req.body;
-    
+
     const interview = await Interview.create({
       userId: req.user.userId,
       type,
       status: 'started'
     });
-    
+
     return res.status(201).json({
       success: true,
       message: 'Interview started successfully',
@@ -90,7 +90,7 @@ router.put('/:id', auth, async (req, res) => {
       req.body,
       { new: true, runValidators: true }
     );
-    
+
     if (!interview) {
       return res.status(404).json({
         success: false,
@@ -98,7 +98,7 @@ router.put('/:id', auth, async (req, res) => {
         data: null
       });
     }
-    
+
     return res.json({
       success: true,
       message: 'Interview updated successfully',
@@ -121,7 +121,7 @@ router.delete('/:id', auth, async (req, res) => {
       _id: req.params.id,
       userId: req.user.userId
     });
-    
+
     if (!interview) {
       return res.status(404).json({
         success: false,
@@ -129,7 +129,7 @@ router.delete('/:id', auth, async (req, res) => {
         data: null
       });
     }
-    
+
     return res.json({
       success: true,
       message: 'Interview deleted successfully',
@@ -141,6 +141,90 @@ router.delete('/:id', auth, async (req, res) => {
       success: false,
       message: 'Failed to delete interview',
       data: null
+    });
+  }
+});
+
+// POST /api/interview/:id/chat - AI Interview Chat with Gemini
+const { evaluateAnswer, generateInterviewQuestions, chatWithAI } = require('../services/aiService');
+
+router.post('/:id/chat', auth, async (req, res) => {
+  try {
+    const { message, jobTitle, context } = req.body;
+
+    if (!message) {
+      return res.status(400).json({
+        success: false,
+        message: 'Message is required'
+      });
+    }
+
+    const interview = await Interview.findOne({
+      _id: req.params.id,
+      userId: req.user.userId
+    });
+
+    if (!interview) {
+      return res.status(404).json({
+        success: false,
+        message: 'Interview not found'
+      });
+    }
+
+    // Use Gemini 2.5 Flash via aiService
+    const result = await chatWithAI(message, jobTitle, context);
+
+    if (!result.success) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to generate AI response',
+        error: result.error
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        message: result.message,
+        timestamp: new Date()
+      }
+    });
+
+  } catch (err) {
+    console.error('Interview chat error:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to generate AI response. Please check your Gemini API key.',
+      error: err.message
+    });
+  }
+});
+
+// POST /api/interview/:id/questions - Generate interview questions
+router.post('/:id/questions', auth, async (req, res) => {
+  try {
+    const { jobTitle, level, count } = req.body;
+
+    const result = await generateInterviewQuestions(jobTitle || 'Software Engineer', level || 'mid', count || 5);
+
+    if (!result.success) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to generate questions',
+        error: result.error
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: result.questions
+    });
+
+  } catch (err) {
+    console.error('Generate questions error:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to generate questions'
     });
   }
 });

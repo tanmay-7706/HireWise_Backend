@@ -1,47 +1,68 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { GoogleGenAI } = require("@google/genai");
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 
 async function analyzeResume(resumeText, jobDescription = '') {
     try {
-        const model = genAI.getGenerativeModel({
-            model: 'gemini-pro',
-            generationConfig: {
-                temperature: 0.7,
-                maxOutputTokens: 2048,
-            }
-        });
+        let prompt = `You are an expert resume analyzer. Analyze this resume and provide CLEAN TEXT output (no markdown, no asterisks, no special formatting).
 
-        let prompt = `You are an expert resume analyzer and career coach. Analyze the following resume with a critical yet constructive eye.
-
-Resume:
+RESUME:
 ${resumeText}
 
-Provide a detailed analysis including:
-1. **Key Skills Identified**: List the specific technical and soft skills mentioned
-2. **Years of Experience**: Estimate based on work history and dates
-3. **Education Background**: Summarize degrees, certifications, and institutions
-4. **Strengths**: What makes this resume stand out?
-5. **Overall Assessment**: Professional evaluation in 2-3 sentences`;
+Provide analysis in this EXACT format (use plain text only, no ** or ## symbols):
+
+KEY SKILLS IDENTIFIED:
+• [List each skill on a new line with bullet points]
+
+YEARS OF EXPERIENCE: [X years based on work history]
+
+EDUCATION: [Summarize degrees and institutions]
+
+STRENGTHS:
+• [List key strengths]
+
+OVERALL ASSESSMENT: [2-3 sentence professional evaluation]`;
 
         if (jobDescription) {
-            prompt += `\n\nJob Description:
+            prompt += `
+
+JOB DESCRIPTION:
 ${jobDescription}
 
-Additionally provide:
-6. **Match Score**: Rate the fit from 0-100 with justification
-7. **Missing Skills**: List specific skills/keywords from the JD that are absent
-8. **Alignment**: Which experiences best match this role?
-9. **Recommendations**: 3-5 specific, actionable improvements to increase match score`;
+ADDITIONAL ANALYSIS:
+
+MATCH SCORE: [0-100]% - [Brief justification]
+
+MISSING SKILLS:
+• [List specific skills from JD that are absent]
+
+BEST MATCHING EXPERIENCES:
+• [List experiences that align with the role]
+
+RECOMMENDATIONS TO IMPROVE MATCH:
+1. [Specific actionable recommendation]
+2. [Specific actionable recommendation]
+3. [Specific actionable recommendation]
+
+Remember: Output ONLY plain text. Do NOT use asterisks (*), hashtags (#), or any markdown formatting.`;
         }
 
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const analysis = response.text();
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+        });
+
+        // Clean up any remaining markdown from the response
+        let cleanText = response.text
+            .replace(/\*\*/g, '')         // Remove bold markers
+            .replace(/\*/g, '•')          // Replace remaining asterisks with bullets
+            .replace(/#{1,6}\s*/g, '')    // Remove headers
+            .replace(/`/g, '')            // Remove code markers
+            .trim();
 
         return {
             success: true,
-            analysis: analysis
+            analysis: cleanText
         };
 
     } catch (error) {
@@ -55,14 +76,6 @@ Additionally provide:
 
 async function generateInterviewQuestions(jobTitle, level = 'mid', count = 5) {
     try {
-        const model = genAI.getGenerativeModel({
-            model: 'gemini-pro',
-            generationConfig: {
-                temperature: 0.9, // Higher temp for more variety
-                maxOutputTokens: 1024,
-            }
-        });
-
         const levelDescriptions = {
             junior: "entry-level with 0-2 years experience",
             mid: "mid-level with 3-5 years experience",
@@ -81,20 +94,18 @@ Guidelines:
 
 Format: Return only the questions, numbered 1-${count}, one per line.
 
-Example style:
-1. How would you approach debugging a production issue where...
-2. Describe a time when you had to make a difficult technical decision...
-
 Now generate ${count} original questions:`;
 
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const text = response.text();
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+        });
 
+        const text = response.text;
         const questions = text
             .split('\n')
             .filter(line => line.trim())
-            .map(line => line.replace(/^\\d+\\.\\s*/, '').trim())
+            .map(line => line.replace(/^\d+\.\s*/, '').trim())
             .filter(q => q.length > 10);
 
         return {
@@ -113,14 +124,6 @@ Now generate ${count} original questions:`;
 
 async function evaluateAnswer(question, answer, jobTitle = '') {
     try {
-        const model = genAI.getGenerativeModel({
-            model: 'gemini-pro',
-            generationConfig: {
-                temperature: 0.5,
-                maxOutputTokens: 800,
-            }
-        });
-
         const contextPrompt = jobTitle ? ` for a ${jobTitle} role` : '';
 
         const prompt = `You are an experienced interviewer evaluating candidate responses${contextPrompt}.
@@ -148,11 +151,13 @@ Strengths: [text]
 Areas for Improvement: [text]
 Suggestions: [text]`;
 
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const text = response.text();
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+        });
 
-        const scoreMatch = text.match(/Score:\\s*(\\d+)/i);
+        const text = response.text;
+        const scoreMatch = text.match(/Score:\s*(\d+)/i);
         const score = scoreMatch ? parseInt(scoreMatch[1]) : 5;
 
         return {
@@ -172,14 +177,6 @@ Suggestions: [text]`;
 
 async function generateCareerRoadmap(currentSkills, targetRole, experienceLevel = 'beginner') {
     try {
-        const model = genAI.getGenerativeModel({
-            model: 'gemini-pro',
-            generationConfig: {
-                temperature: 0.8,
-                maxOutputTokens: 3000,
-            }
-        });
-
         const skillsStr = currentSkills.length > 0 ? currentSkills.join(', ') : 'Starting from scratch';
 
         const prompt = `You are a career development expert. Create a personalized, actionable career roadmap for someone who wants to become a "${targetRole}".
@@ -217,10 +214,12 @@ Return ONLY a valid JSON object (no markdown formatting) with this structure:
   "careerTips": ["Industry-specific tip 1", "Networking tip", "Portfolio advice"]
 }`;
 
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        let text = response.text();
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+        });
 
+        let text = response.text;
         // Clean up markdown code blocks if present
         text = text.replace(/```json/g, '').replace(/```/g, '').trim();
 
@@ -240,9 +239,46 @@ Return ONLY a valid JSON object (no markdown formatting) with this structure:
     }
 }
 
+async function chatWithAI(message, jobTitle, context) {
+    try {
+        const prompt = `You are an AI interviewer conducting a ${jobTitle || 'mock'} interview. 
+
+Previous context: ${context || 'This is the start of the interview.'}
+
+The candidate just said: "${message}"
+
+Respond as a professional interviewer would:
+1. If they're ready to start, ask them a relevant interview question
+2. If they answered a question, briefly acknowledge and ask a follow-up or new question
+3. Be encouraging but professional
+4. Keep responses concise (2-3 sentences max)
+5. Ask one question at a time
+
+Your response:`;
+
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+        });
+
+        return {
+            success: true,
+            message: response.text
+        };
+
+    } catch (error) {
+        console.error('Chat AI Error:', error);
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+}
+
 module.exports = {
     analyzeResume,
     generateInterviewQuestions,
     evaluateAnswer,
-    generateCareerRoadmap
+    generateCareerRoadmap,
+    chatWithAI
 };

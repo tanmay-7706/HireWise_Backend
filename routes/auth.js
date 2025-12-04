@@ -90,7 +90,7 @@ router.post('/signup', async (req, res) => {
       password: hashedPassword
     });
 
-    console.log('✅ User created successfully:', user.email);
+    console.log('[AUTH] User created successfully:', user.email);
 
     // Generate JWT token
     const token = generateToken(user._id, user.email);
@@ -111,7 +111,7 @@ router.post('/signup', async (req, res) => {
     });
 
   } catch (err) {
-    console.error('❌ Signup error:', err);
+    console.error('[AUTH ERROR] Signup error:', err);
     return res.status(500).json({
       success: false,
       message: 'Registration failed. Please try again.',
@@ -122,7 +122,7 @@ router.post('/signup', async (req, res) => {
 
 // POST /api/auth/login - User authentication
 router.post('/login', async (req, res) => {
-  console.log('🔐 Login attempt:', { email: req.body.email, hasPassword: !!req.body.password });
+  console.log('[AUTH] Login attempt:', { email: req.body.email, hasPassword: !!req.body.password });
 
   try {
     const { email, password } = req.body;
@@ -130,7 +130,7 @@ router.post('/login', async (req, res) => {
     // Input validation
     const validationErrors = validateInput({ email, password });
     if (validationErrors.length > 0) {
-      console.log('❌ Login validation failed:', validationErrors);
+      console.log('[AUTH WARN] Login validation failed:', validationErrors);
       return res.status(400).json({
         success: false,
         message: validationErrors.join(', '),
@@ -141,7 +141,7 @@ router.post('/login', async (req, res) => {
     // Find user by email
     const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
-      console.log('❌ User not found:', email);
+      console.log('[AUTH WARN] User not found:', email);
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password',
@@ -152,7 +152,7 @@ router.post('/login', async (req, res) => {
     // Verify password
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      console.log('❌ Invalid password for:', email);
+      console.log('[AUTH WARN] Invalid password for:', email);
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password',
@@ -160,7 +160,7 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    console.log('✅ Login successful:', user.email);
+    console.log('[AUTH] Login successful:', user.email);
 
     // Generate JWT token
     const token = generateToken(user._id, user.email);
@@ -181,7 +181,7 @@ router.post('/login', async (req, res) => {
     });
 
   } catch (err) {
-    console.error('❌ Login error:', err);
+    console.error('[AUTH ERROR] Login error:', err);
     return res.status(500).json({
       success: false,
       message: 'Login failed. Please try again.',
@@ -197,7 +197,7 @@ router.get('/users', async (req, res) => {
       .select('-password')
       .sort({ createdAt: -1 });
 
-    console.log(`📊 Retrieved ${users.length} users`);
+    console.log(`[AUTH] Retrieved ${users.length} users`);
 
     return res.json({
       success: true,
@@ -206,7 +206,7 @@ router.get('/users', async (req, res) => {
     });
 
   } catch (err) {
-    console.error('❌ Fetch users error:', err);
+    console.error('[AUTH ERROR] Fetch users error:', err);
     return res.status(500).json({
       success: false,
       message: 'Failed to fetch users',

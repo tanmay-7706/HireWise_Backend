@@ -64,31 +64,31 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5001;
 const server = app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`🌐 CORS enabled for: ${allowedOrigins.join(', ')}`);
+  console.log(`[SERVER] Running on port ${PORT}`);
+  console.log(`[CORS] Enabled for: ${allowedOrigins.join(', ')}`);
 });
 
 process.on('SIGTERM', gracefulShutdown);
 process.on('SIGINT', gracefulShutdown);
 
 async function gracefulShutdown(signal) {
-  console.log(`\n📡 Received ${signal}. Starting graceful shutdown...`);
+  console.log(`\n[SHUTDOWN] Received ${signal}. Starting graceful shutdown...`);
 
   server.close(async () => {
-    console.log('🔒 HTTP server closed.');
+    console.log('[SHUTDOWN] HTTP server closed.');
 
     try {
       await mongoose.connection.close();
-      console.log('🗄️ MongoDB connection closed.');
+      console.log('[SHUTDOWN] MongoDB connection closed.');
       process.exit(0);
     } catch (err) {
-      console.error('❌ Error closing MongoDB connection:', err);
+      console.error('[ERROR] Error closing MongoDB connection:', err);
       process.exit(1);
     }
   });
 
   setTimeout(() => {
-    console.error('❌ Could not close connections in time, forcefully shutting down');
+    console.error('[ERROR] Could not close connections in time, forcefully shutting down');
     process.exit(1);
   }, 10000);
 }
