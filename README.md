@@ -421,7 +421,7 @@ npm install
 3. **Set up environment variables:**
 Create a `.env` file:
 ```env
-MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/hirewise
+MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/<database>
 JWT_SECRET=your-super-secret-jwt-key
 GEMINI_API_KEY=your-gemini-api-key
 GOOGLE_CLIENT_ID=your-google-client-id
