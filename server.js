@@ -52,14 +52,12 @@ const corsOptions = {
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
   exposedHeaders: ['Content-Length', 'X-Request-Id'],
   optionsSuccessStatus: 200,
+  preflightContinue: false,
   maxAge: 86400 // Cache preflight for 24 hours
 };
 
-// Apply CORS middleware
+// Apply CORS middleware - handles both regular requests and preflight
 app.use(cors(corsOptions));
-
-// Handle preflight requests explicitly
-app.options('*', cors(corsOptions));
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
