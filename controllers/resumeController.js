@@ -1,7 +1,7 @@
 const Resume = require('../models/Resume');
 const JobDescription = require('../models/JobDescription');
 const { getMockJDById } = require('../data/mockJDs');
-const { analyzeResume } = require('../services/aiService');
+const { analyzeResume, generateCoverLetter: generateAILetter } = require('../services/aiService');
 
 // GET /api/resume
 const getAllResumes = async (req, res, next) => {
@@ -273,4 +273,94 @@ const deleteResume = async (req, res, next) => {
   }
 };
 
-module.exports = { getAllResumes, getResumeById, uploadResume, updateResume, screenResume, deleteResume };
+// POST /api/resume/:id/cover-letter
+const generateCoverLetter = async (req, res, next) => {
+  try {
+    const { jdId } = req.body;
+
+    if (!jdId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Job description ID is required',
+        data: null
+      });
+    }
+
+    const resume = await Resume.findOne({
+      _id: req.params.id,
+      userId: req.user.userId
+    });
+
+    if (!resume) {
+      return res.status(404).json({
+        success: false,
+        message: 'Resume not found',
+        data: null
+      });
+    }
+
+    let jobDescription = '';
+    
+    if (jdId.startsWith('jd-')) {
+      const mockJD = getMockJDById(jdId);
+      if (!mockJD) {
+        return res.status(404).json({
+          success: false,
+          message: 'Mock job description not found',
+          data: null
+        });
+      }
+      jobDescription = mockJD.description;
+    } else {
+      const jd = await JobDescription.findOne({
+        _id: jdId,
+        userId: req.user.userId
+      });
+
+      if (!jd) {
+        return res.status(404).json({
+          success: false,
+          message: 'Job description not found',
+          data: null
+        });
+      }
+      jobDescription = jd.description;
+    }
+
+    const resumeData = resume.parsedData || {};
+    const resumeText = `
+Name: ${resumeData.name || 'Not specified'}
+Email: ${resumeData.email || 'Not specified'}
+Phone: ${resumeData.phone || 'Not specified'}
+Skills: ${(resumeData.skills || []).join(', ') || 'Not specified'}
+Experience: ${(resumeData.experience || []).map(exp =>
+      `${exp.title || ''} at ${exp.company || ''} (${exp.duration || ''}): ${exp.description || ''}`
+    ).join('\n') || 'Not specified'}
+Education: ${(resumeData.education || []).map(edu =>
+      `${edu.degree || ''} from ${edu.institution || ''} (${edu.year || ''})`
+    ).join('\n') || 'Not specified'}
+`.trim();
+
+    const aiResult = await generateAILetter(resumeText, jobDescription);
+
+    if (!aiResult.success) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to generate cover letter',
+        error: aiResult.error
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: 'Cover letter generated successfully',
+      data: {
+        coverLetter: aiResult.coverLetter
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { getAllResumes, getResumeById, uploadResume, updateResume, screenResume, deleteResume, generateCoverLetter };

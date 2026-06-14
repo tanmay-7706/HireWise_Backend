@@ -1,5 +1,5 @@
 const Interview = require('../models/Interview');
-const { evaluateAnswer, generateInterviewQuestions, chatWithAI } = require('../services/aiService');
+const { evaluateAnswer, generateInterviewQuestions, chatWithAI, analyzeInterviewTranscript } = require('../services/aiService');
 
 // GET /api/interview - with pagination
 const getAllInterviews = async (req, res, next) => {
@@ -204,4 +204,54 @@ const generateQuestions = async (req, res, next) => {
   }
 };
 
-module.exports = { getAllInterviews, getInterviewById, startInterview, updateInterview, deleteInterview, chat, generateQuestions };
+// POST /api/interview/:id/analyze
+const analyze = async (req, res, next) => {
+  try {
+    const { transcript, jobTitle } = req.body;
+
+    if (!transcript) {
+      return res.status(400).json({
+        success: false,
+        message: 'Transcript is required'
+      });
+    }
+
+    const interview = await Interview.findOne({
+      _id: req.params.id,
+      userId: req.user.userId
+    });
+
+    if (!interview) {
+      return res.status(404).json({
+        success: false,
+        message: 'Interview not found'
+      });
+    }
+
+    const result = await analyzeInterviewTranscript(transcript, jobTitle);
+
+    if (!result.success) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to analyze interview',
+        error: result.error
+      });
+    }
+
+    // Save the analysis to the interview model
+    const analysisData = result.data;
+    interview.overallScore = analysisData.overallScore;
+    interview.feedback = JSON.stringify(analysisData); // Store the full JSON in feedback field to access later
+    interview.status = 'completed';
+    await interview.save();
+
+    return res.json({
+      success: true,
+      data: interview
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { getAllInterviews, getInterviewById, startInterview, updateInterview, deleteInterview, chat, generateQuestions, analyze };

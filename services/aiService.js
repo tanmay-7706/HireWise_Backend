@@ -284,11 +284,86 @@ Your response:`;
     }
 }
 
+async function analyzeInterviewTranscript(transcript, jobTitle) {
+    try {
+        const prompt = `You are an expert technical recruiter and interviewer. You are evaluating a candidate's performance in a mock interview for a ${jobTitle || 'General'} role based on the following chat transcript.
+
+TRANSCRIPT:
+${transcript}
+
+Analyze the candidate's performance and provide a comprehensive evaluation. 
+Return ONLY a valid JSON object (no markdown formatting, no code blocks) with this exact structure:
+{
+  "overallScore": 85, // number from 0-100
+  "communicationScore": 90, // number from 0-100
+  "technicalScore": 80, // number from 0-100
+  "problemSolvingScore": 85, // number from 0-100
+  "strengths": ["Clear communication", "Good understanding of core concepts"], // array of 2-4 strings
+  "improvements": ["Could provide more concrete examples", "Hesitated on question 3"], // array of 2-4 strings
+  "feedback": "Overall, a strong performance. The candidate demonstrated a good grasp of the role's requirements, but could improve by detailing specific past experiences." // 2-3 sentences overall summary
+}`;
+
+        const text = await callGeminiWithRetry(prompt);
+        // Clean up markdown code blocks if present
+        const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        const data = JSON.parse(cleanText);
+
+        return {
+            success: true,
+            data: data
+        };
+
+    } catch (error) {
+        console.error('Interview Analysis Error:', error);
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+}
+
+async function generateCoverLetter(resumeText, jobDescription) {
+    try {
+        const prompt = `You are an expert career coach and professional copywriter.
+Write a highly tailored, persuasive, and professional cover letter for a candidate applying to the job described below, using their resume as context.
+
+RESUME:
+${resumeText}
+
+JOB DESCRIPTION:
+${jobDescription}
+
+Guidelines:
+1. Make it professional but engaging (not robotic).
+2. Highlight the most relevant skills from the resume that match the job description.
+3. Keep it to 3-4 paragraphs.
+4. Format it as a standard cover letter.
+5. Return ONLY the text of the cover letter, no markdown formatting, no explanations, no JSON. Use [Your Name], [Company Name], etc. for placeholders if exact details are missing.
+
+Write the cover letter now:`;
+
+        const text = await callGeminiWithRetry(prompt);
+        return {
+            success: true,
+            coverLetter: text.trim()
+        };
+
+    } catch (error) {
+        console.error('Cover Letter Generation Error:', error);
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+}
+
 module.exports = {
     analyzeResume,
     generateInterviewQuestions,
     evaluateAnswer,
     generateCareerRoadmap,
     chatWithAI,
+    analyzeInterviewTranscript,
+    generateCoverLetter,
     callGeminiWithRetry
 };
