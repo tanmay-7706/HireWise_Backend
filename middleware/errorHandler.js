@@ -1,3 +1,5 @@
+const multer = require('multer');
+
 // 404 Not Found middleware
 const notFound = (req, res, next) => {
   return res.status(404).json({ 
@@ -9,6 +11,31 @@ const notFound = (req, res, next) => {
 
 // Global error handler middleware
 const errorHandler = (err, req, res, next) => {
+  // Handle Multer-specific errors
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        success: false,
+        message: 'File too large. Maximum size is 5MB.',
+        data: null,
+      });
+    }
+    return res.status(400).json({
+      success: false,
+      message: `File upload error: ${err.message}`,
+      data: null,
+    });
+  }
+
+  // Handle custom fileFilter errors
+  if (err.message === 'Only PDF files are allowed. Please upload a PDF resume.') {
+    return res.status(400).json({
+      success: false,
+      message: err.message,
+      data: null,
+    });
+  }
+
   let error = { ...err };
   error.message = err.message;
 

@@ -2,6 +2,37 @@ const { GoogleGenAI } = require("@google/genai");
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 
+/**
+ * Call Gemini API with automatic retry and graceful fallback.
+ * @param {string} prompt - The prompt to send to Gemini.
+ * @param {number} maxRetries - Maximum number of retries (default: 2).
+ * @returns {string} The generated text response.
+ * @throws {Error} If all retries fail, throws a 503 error.
+ */
+const callGeminiWithRetry = async (prompt, maxRetries = 2) => {
+  let lastError;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+      });
+      return response.text;
+    } catch (error) {
+      lastError = error;
+      console.error(`[AI] Attempt ${attempt + 1}/${maxRetries + 1} failed:`, error.message);
+      if (attempt < maxRetries) {
+        await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
+      }
+    }
+  }
+
+  const err = new Error('AI service is temporarily unavailable. Please try again in a moment.');
+  err.statusCode = 503;
+  throw err;
+};
+
 async function analyzeResume(resumeText, jobDescription = '') {
     try {
         let prompt = `You are an expert resume analyzer. Analyze this resume and provide CLEAN TEXT output (no markdown, no asterisks, no special formatting).
@@ -47,13 +78,10 @@ RECOMMENDATIONS TO IMPROVE MATCH:
 Remember: Output ONLY plain text. Do NOT use asterisks (*), hashtags (#), or any markdown formatting.`;
         }
 
-        const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: prompt,
-        });
+        const text = await callGeminiWithRetry(prompt);
 
         // Clean up any remaining markdown from the response
-        let cleanText = response.text
+        let cleanText = text
             .replace(/\*\*/g, '')         // Remove bold markers
             .replace(/\*/g, '•')          // Replace remaining asterisks with bullets
             .replace(/#{1,6}\s*/g, '')    // Remove headers
@@ -96,12 +124,7 @@ Format: Return only the questions, numbered 1-${count}, one per line.
 
 Now generate ${count} original questions:`;
 
-        const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: prompt,
-        });
-
-        const text = response.text;
+        const text = await callGeminiWithRetry(prompt);
         const questions = text
             .split('\n')
             .filter(line => line.trim())
@@ -151,12 +174,7 @@ Strengths: [text]
 Areas for Improvement: [text]
 Suggestions: [text]`;
 
-        const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: prompt,
-        });
-
-        const text = response.text;
+        const text = await callGeminiWithRetry(prompt);
         const scoreMatch = text.match(/Score:\s*(\d+)/i);
         const score = scoreMatch ? parseInt(scoreMatch[1]) : 5;
 
@@ -214,16 +232,10 @@ Return ONLY a valid JSON object (no markdown formatting) with this structure:
   "careerTips": ["Industry-specific tip 1", "Networking tip", "Portfolio advice"]
 }`;
 
-        const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: prompt,
-        });
-
-        let text = response.text;
+        const text = await callGeminiWithRetry(prompt);
         // Clean up markdown code blocks if present
-        text = text.replace(/```json/g, '').replace(/```/g, '').trim();
-
-        const data = JSON.parse(text);
+        const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        const data = JSON.parse(cleanText);
 
         return {
             success: true,
@@ -256,14 +268,11 @@ Respond as a professional interviewer would:
 
 Your response:`;
 
-        const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: prompt,
-        });
+        const text = await callGeminiWithRetry(prompt);
 
         return {
             success: true,
-            message: response.text
+            message: text
         };
 
     } catch (error) {
@@ -280,5 +289,6 @@ module.exports = {
     generateInterviewQuestions,
     evaluateAnswer,
     generateCareerRoadmap,
-    chatWithAI
+    chatWithAI,
+    callGeminiWithRetry
 };
